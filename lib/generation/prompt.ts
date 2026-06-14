@@ -5,8 +5,47 @@
  * afterwards by lib/generation/verify.
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { CandidateProfile } from "@/lib/profile";
 import type { StoredOffer } from "@/lib/aggregation/store";
+
+/** The FR writing-style skill that should govern every CV/letter we formulate. */
+const STYLE_SKILL_PATH = join(
+  process.cwd(),
+  ".claude/skills/cv-lettre-motivation-fr/SKILL.md",
+);
+
+let cachedStyleGuide: string | null | undefined;
+
+/**
+ * Load the writing-style rules from the cv-lettre-motivation-fr skill and inject
+ * them into the system prompt, so the SAME guidance applies on every provider.
+ * The headless `claude` CLI runs with tools disabled and never auto-loads a
+ * skill, so the file's content has to travel inside the prompt itself. The
+ * frontmatter is stripped; a missing file just means generation proceeds without
+ * the extra style layer (the zero-invention rule still applies).
+ */
+function loadStyleGuide(): string | null {
+  if (cachedStyleGuide !== undefined) return cachedStyleGuide;
+  try {
+    const raw = readFileSync(STYLE_SKILL_PATH, "utf8");
+    const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "").trim();
+    cachedStyleGuide = body || null;
+  } catch {
+    cachedStyleGuide = null;
+  }
+  return cachedStyleGuide;
+}
+
+/** Tie the skill's prose rules to the JSON fields the model must fill. */
+const STYLE_FIELD_MAP = `APPLICATION DU GUIDE DE STYLE AUX CHAMPS JSON :
+- "cv.summary" = le paragraphe « Profil » : prose continue à la première personne, sans puces.
+- "letter.paragraphs" = le corps de la lettre : prose continue, 3 à 4 paragraphes, aucune puce.
+- "cv.experiences[].highlights" = des puces courtes (une action ou une réalisation par puce).
+- "cv.headline" = un titre sobre aligné sur l'intitulé de l'offre.
+- Jamais de tiret long (—) ni de double tiret dans aucun champ : utilise les deux-points, la virgule, les parenthèses ou le tiret court simple.
+- Tu ne peux PAS poser de questions ici : n'invente rien, travaille uniquement avec les faits fournis.`;
 
 const SYSTEM = `Tu es un assistant RH expert qui adapte la candidature d'une personne à une offre d'emploi précise, pour passer les filtres ATS (tri automatique des CV).
 
@@ -107,5 +146,16 @@ export function buildAdaptationPrompt(
     "",
     "Rappel : zéro invention. Réponds uniquement avec le JSON.",
   ].join("\n");
-  return { system: SYSTEM, user };
+
+  const styleGuide = loadStyleGuide();
+  const system = styleGuide
+    ? [
+        SYSTEM,
+        "GUIDE DE STYLE RÉDACTIONNEL (à appliquer à tous les textes que tu rédiges) :",
+        styleGuide,
+        STYLE_FIELD_MAP,
+      ].join("\n\n")
+    : SYSTEM;
+
+  return { system, user };
 }

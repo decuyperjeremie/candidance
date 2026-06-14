@@ -112,3 +112,58 @@ export function verifyAgainstProfile(
     report,
   };
 }
+
+/**
+ * Style normalisation: the cv-lettre-motivation-fr skill forbids the em dash
+ * (—), en dash (–) and double hyphen. The prompt asks for it, but that is not a
+ * guarantee, so we strip them deterministically before saving, replacing each
+ * with a plain short hyphen (an articulation the skill explicitly allows).
+ */
+function stripLongDashes(s: string): string {
+  return s
+    .replace(/\s*(?:[—–]|--)\s*/g, " - ")
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
+
+/** Apply stripLongDashes to every text field; report whether anything changed. */
+export function normalizeProse(
+  content: ApplicationContent,
+): { content: ApplicationContent; dashesRemoved: boolean } {
+  let changed = false;
+  const fix = (s: string): string => {
+    const out = stripLongDashes(s);
+    if (out !== s) changed = true;
+    return out;
+  };
+  const fixOpt = (s?: string): string | undefined => (s === undefined ? undefined : fix(s));
+
+  const cv = content.cv;
+  const next: ApplicationContent = {
+    cv: {
+      ...cv,
+      headline: fixOpt(cv.headline),
+      summary: fixOpt(cv.summary),
+      experiences: cv.experiences.map((e) => ({
+        ...e,
+        title: fix(e.title),
+        organisation: fixOpt(e.organisation),
+        period: fixOpt(e.period),
+        location: fixOpt(e.location),
+        highlights: e.highlights.map(fix),
+      })),
+      formations: cv.formations.map((f) => ({
+        ...f,
+        degree: fix(f.degree),
+        institution: fixOpt(f.institution),
+        period: fixOpt(f.period),
+      })),
+      skills: cv.skills.map(fix),
+    },
+    letter: {
+      recipientContext: fixOpt(content.letter.recipientContext),
+      paragraphs: content.letter.paragraphs.map(fix),
+    },
+  };
+  return { content: next, dashesRemoved: changed };
+}

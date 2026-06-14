@@ -11,7 +11,7 @@ import { loadCandidateProfile } from "@/lib/profile";
 import { adaptApplication, GenerationError } from "./adapt";
 import type { ApplicationContent } from "./content";
 import { saveApplication } from "./store";
-import { verifyAgainstProfile, type VerificationReport } from "./verify";
+import { verifyAgainstProfile, normalizeProse, type VerificationReport } from "./verify";
 import { APPLICATION_FILES } from "@/lib/render";
 
 export { GenerationError };
@@ -40,7 +40,11 @@ export async function generateApplication(offerId: number): Promise<GenerateResu
 
   const profile = await loadCandidateProfile();
   const { content: raw, provider, model } = await adaptApplication(profile, offer);
-  const { content, report } = verifyAgainstProfile(raw, profile);
+  const { content: verified, report } = verifyAgainstProfile(raw, profile);
+  const { content, dashesRemoved } = normalizeProse(verified);
+  if (dashesRemoved) {
+    report.flags.push("Tirets longs (—) remplacés par des tirets courts (règle de style).");
+  }
 
   saveApplication({ offerId, content, provider, model });
 
