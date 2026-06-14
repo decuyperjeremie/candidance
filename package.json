@@ -1,0 +1,40 @@
+{
+  "name": "tatiana",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tatiana - assistant de recherche d'emploi (prototype jetable)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "smoke": "tsx scripts/smoke.ts",
+    "migrate": "tsx scripts/migrate.ts",
+    "discover": "tsx scripts/discover.ts",
+    "generate": "tsx scripts/generate.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "better-sqlite3": "^11.10.0",
+    "cheerio": "^1.2.0",
+    "docx": "^9.7.1",
+    "jszip": "^3.10.1",
+    "next": "^15.5.0",
+    "pdfkit": "^0.19.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.0"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.0",
+    "@types/pdfkit": "^0.17.6",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
