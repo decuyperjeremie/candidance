@@ -1,0 +1,208 @@
+/* Light editorial design system (light-editorial-redesign).
+   Single source of truth for tokens (:root custom properties) + base element
+   styles + a few reusable classes. No component library. */
+
+:root {
+  /* Colour */
+  --canvas: #faf9f6;
+  --surface: #ffffff;
+  --ink: #1b1a17;
+  --ink-soft: #3c3a34;
+  --muted: #6f6b62;
+  --faint: #908b80;
+  --hairline: #e7e3da;
+  --hairline-strong: #d8d3c8;
+  --accent: #1f4e79;
+  --accent-ink: #173a5b;
+  --accent-soft: #eef2f7;
+
+  /* Calm status / signal tints */
+  --good: #2f7d56;
+  --good-soft: #eaf3ee;
+  --warn: #9a6a1c;
+  --warn-soft: #f6efe2;
+  --pay: #2f6d50;
+
+  /* Spacing (4-based) */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-8: 3rem;
+
+  --radius: 8px;
+  --radius-sm: 6px;
+  --pill: 999px;
+
+  --maxw: 820px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--sp-3);
+}
+h1 { font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.5rem); }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.02rem; font-weight: 600; }
+
+p { margin: 0 0 1em; }
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+a:hover { text-decoration: underline; }
+
+main { display: block; }
+
+/* --- layout --- */
+.container {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: var(--sp-8) var(--sp-5);
+}
+
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.small { font-size: 0.85rem; }
+
+/* --- nav --- */
+.nav {
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--canvas) 88%, white);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: saturate(1.1) blur(6px);
+}
+.nav-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: var(--sp-3) var(--sp-5);
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-5);
+}
+.nav-brand {
+  font-family: var(--font-display), serif;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.nav a { color: var(--muted); }
+.nav a:hover { color: var(--ink); text-decoration: none; }
+.nav .active { color: var(--ink); }
+
+/* --- card --- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: var(--sp-5) calc(var(--sp-5) + 0.1rem);
+}
+.card + .card { margin-top: var(--sp-5); }
+
+/* Section heading with a thin accent rule (echoes the CV). */
+.section-title {
+  font-family: var(--font-display), serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid var(--hairline-strong);
+  padding-bottom: var(--sp-2);
+  margin: 0 0 var(--sp-4);
+}
+
+/* --- chips --- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--pill);
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.chip-accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, var(--hairline)); background: var(--accent-soft); }
+.chip-pay { color: var(--pay); border-color: color-mix(in srgb, var(--pay) 30%, var(--hairline)); }
+
+/* --- buttons --- */
+.btn {
+  font: inherit;
+  font-size: 0.92rem;
+  line-height: 1;
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 1.05rem;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { color: var(--faint); cursor: default; border-color: var(--hairline); background: var(--canvas); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.btn-primary:disabled { background: var(--hairline-strong); border-color: var(--hairline-strong); color: var(--surface); }
+
+/* --- inputs --- */
+.input {
+  width: 100%;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+.input:focus { outline: none; border-color: var(--accent); }
+.label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+.rule { border: none; border-top: 1px solid var(--hairline); margin: var(--sp-5) 0; }

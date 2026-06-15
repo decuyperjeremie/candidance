@@ -3,67 +3,37 @@ import { getOffer } from "@/lib/aggregation/store";
 import { getApplication } from "@/lib/generation/store";
 import { APPLICATION_FILES } from "@/lib/render";
 import type { ApplicationContent } from "@/lib/generation/content";
+import { buildDraft, gmailComposeUrl, mailtoUrl } from "@/lib/email/draft";
+import { getEvents, getStatus, STATUSES, STATUS_LABELS } from "@/lib/tracking/store";
+import { scoreColor } from "@/app/ui/tokens";
 import { ApplicationEditor, GenerateButton } from "./editor";
+import { TrackingControls } from "./tracking";
 
 // Reads the SQLite DB at request time — never statically prerendered.
 export const dynamic = "force-dynamic";
-
-const ACCENT = "#7fd4ff";
-const MUTED = "#9a9aa3";
-const CARD_BG = "#14141b";
-const BORDER = "#23232d";
-
-function scoreColor(score: number): string {
-  if (score >= 70) return "#3ddc84";
-  if (score >= 40) return "#ffcc66";
-  return MUTED;
-}
-
-const chip = {
-  display: "inline-block",
-  fontSize: "0.8rem",
-  color: MUTED,
-  border: `1px solid ${BORDER}`,
-  borderRadius: 6,
-  padding: "1px 8px",
-} as const;
-
-const backLink = { color: ACCENT, textDecoration: "none", fontSize: "0.9rem" } as const;
 
 /** Read-only rendering of the generated CV + letter, mirroring what downloads carry. */
 function ApplicationView({ content }: { content: ApplicationContent }) {
   const { cv, letter } = content;
   return (
-    <section
-      style={{
-        background: CARD_BG,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 10,
-        padding: "1.25rem 1.4rem",
-        marginTop: "1.5rem",
-      }}
-    >
-      <h2 style={{ fontSize: "1.15rem", marginTop: 0 }}>Aperçu</h2>
+    <section className="card">
+      <h2 className="section-title">Aperçu</h2>
 
       {cv.headline && <div style={{ fontWeight: 600, fontSize: "1.05rem" }}>{cv.headline}</div>}
-      {cv.summary && (
-        <p style={{ color: "#cfcfd6", lineHeight: 1.55, marginTop: 8 }}>{cv.summary}</p>
-      )}
+      {cv.summary && <p style={{ color: "var(--ink-soft)", lineHeight: 1.6, marginTop: "var(--sp-2)" }}>{cv.summary}</p>}
 
       {cv.experiences.length > 0 && (
         <>
-          <h3 style={{ fontSize: "0.95rem", color: ACCENT, margin: "1rem 0 0.5rem" }}>Expériences</h3>
+          <h3 style={{ margin: "var(--sp-4) 0 var(--sp-2)" }}>Expériences</h3>
           {cv.experiences.map((e, i) => (
-            <div key={i} style={{ marginBottom: "0.8rem" }}>
+            <div key={i} style={{ marginBottom: "var(--sp-3)" }}>
               <div style={{ fontWeight: 600 }}>
                 {e.title}
-                {e.organisation ? ` — ${e.organisation}` : ""}
+                {e.organisation ? ` – ${e.organisation}` : ""}
               </div>
-              <div style={{ color: MUTED, fontSize: "0.85rem" }}>
-                {[e.period, e.location].filter(Boolean).join(" · ")}
-              </div>
+              <div className="muted small">{[e.period, e.location].filter(Boolean).join(" · ")}</div>
               {e.highlights.length > 0 && (
-                <ul style={{ margin: "4px 0 0", paddingLeft: "1.2rem", color: "#cfcfd6", lineHeight: 1.5 }}>
+                <ul style={{ margin: "4px 0 0", paddingLeft: "1.2rem", color: "var(--ink-soft)", lineHeight: 1.55 }}>
                   {e.highlights.map((h, j) => (
                     <li key={j}>{h}</li>
                   ))}
@@ -76,12 +46,12 @@ function ApplicationView({ content }: { content: ApplicationContent }) {
 
       {cv.formations.length > 0 && (
         <>
-          <h3 style={{ fontSize: "0.95rem", color: ACCENT, margin: "1rem 0 0.5rem" }}>Formations</h3>
+          <h3 style={{ margin: "var(--sp-4) 0 var(--sp-2)" }}>Formations</h3>
           {cv.formations.map((f, i) => (
             <div key={i} style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: 600 }}>{f.degree}</span>
-              {f.institution ? ` — ${f.institution}` : ""}
-              {f.period ? <span style={{ color: MUTED }}> ({f.period})</span> : null}
+              {f.institution ? ` – ${f.institution}` : ""}
+              {f.period ? <span className="muted"> ({f.period})</span> : null}
             </div>
           ))}
         </>
@@ -89,10 +59,10 @@ function ApplicationView({ content }: { content: ApplicationContent }) {
 
       {cv.skills.length > 0 && (
         <>
-          <h3 style={{ fontSize: "0.95rem", color: ACCENT, margin: "1rem 0 0.5rem" }}>Compétences</h3>
+          <h3 style={{ margin: "var(--sp-4) 0 var(--sp-2)" }}>Compétences</h3>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
             {cv.skills.map((s, i) => (
-              <span key={i} style={chip}>{s}</span>
+              <span key={i} className="chip">{s}</span>
             ))}
           </div>
         </>
@@ -100,39 +70,33 @@ function ApplicationView({ content }: { content: ApplicationContent }) {
 
       {cv.languages.length > 0 && (
         <>
-          <h3 style={{ fontSize: "0.95rem", color: ACCENT, margin: "1rem 0 0.5rem" }}>Langues</h3>
-          <div style={{ color: "#cfcfd6" }}>
+          <h3 style={{ margin: "var(--sp-4) 0 var(--sp-2)" }}>Langues</h3>
+          <div style={{ color: "var(--ink-soft)" }}>
             {cv.languages.map((l) => (l.level ? `${l.name} (${l.level})` : l.name)).join(" · ")}
           </div>
         </>
       )}
 
-      <h3 style={{ fontSize: "0.95rem", color: ACCENT, margin: "1.2rem 0 0.5rem" }}>Lettre de motivation</h3>
-      {letter.recipientContext && (
-        <div style={{ color: MUTED, fontSize: "0.85rem", marginBottom: 6 }}>{letter.recipientContext}</div>
-      )}
+      <h3 style={{ margin: "var(--sp-5) 0 var(--sp-2)" }}>Lettre de motivation</h3>
+      {letter.recipientContext && <div className="muted small" style={{ marginBottom: 6 }}>{letter.recipientContext}</div>}
       {letter.paragraphs.map((p, i) => (
-        <p key={i} style={{ color: "#cfcfd6", lineHeight: 1.6, margin: "0 0 0.7rem" }}>{p}</p>
+        <p key={i} style={{ color: "var(--ink-soft)", lineHeight: 1.65, margin: "0 0 0.7rem" }}>{p}</p>
       ))}
     </section>
   );
 }
 
-export default async function OffreDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function OffreDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const offerId = Number(id);
   const offer = Number.isNaN(offerId) ? undefined : getOffer(offerId);
 
   if (!offer) {
     return (
-      <main style={{ maxWidth: 760, margin: "0 auto", padding: "3rem 1.5rem" }}>
-        <Link href="/offres" style={backLink}>← Retour aux offres</Link>
-        <h1 style={{ fontSize: "1.6rem", marginTop: "1.5rem" }}>Offre introuvable</h1>
-        <p style={{ color: MUTED }}>
+      <main className="container" style={{ maxWidth: 720 }}>
+        <Link href="/offres" className="small">← Retour aux offres</Link>
+        <h1 style={{ marginTop: "var(--sp-5)" }}>Offre introuvable</h1>
+        <p className="muted">
           Aucune offre ne correspond à l&apos;identifiant #{id}. Elle a peut-être été
           retirée de la base.
         </p>
@@ -141,41 +105,38 @@ export default async function OffreDetailPage({
   }
 
   const app = getApplication(offerId);
+  const status = getStatus(offerId);
+  const events = app ? getEvents(offerId) : [];
+  const draft = app ? buildDraft(offer, app.content.cv.contact.fullName) : null;
   const url = offer.sources.find((s) => s.url)?.url;
   const where = [offer.company, offer.location].filter(Boolean).join(" · ");
   const postedAt = offer.postedAt ? new Date(offer.postedAt) : null;
-  const postedLabel =
-    postedAt && !Number.isNaN(postedAt.getTime()) ? postedAt.toLocaleDateString("fr-FR") : null;
+  const postedLabel = postedAt && !Number.isNaN(postedAt.getTime()) ? postedAt.toLocaleDateString("fr-FR") : null;
 
   return (
-    <main style={{ maxWidth: 760, margin: "0 auto", padding: "3rem 1.5rem" }}>
-      <Link href="/offres" style={backLink}>← Retour aux offres</Link>
+    <main className="container">
+      <Link href="/offres" className="small">← Retour aux offres</Link>
 
-      <header style={{ marginTop: "1.5rem" }}>
-        <div style={{ display: "flex", gap: "0.9rem", alignItems: "baseline" }}>
-          <span
-            style={{ color: scoreColor(offer.score), fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
-            title="Score de pertinence (0–100)"
-          >
+      <header style={{ marginTop: "var(--sp-5)" }}>
+        <div style={{ display: "flex", gap: "var(--sp-4)", alignItems: "baseline" }}>
+          <span style={{ color: scoreColor(offer.score), fontWeight: 600, fontVariantNumeric: "tabular-nums" }} title="Score de pertinence (0–100)">
             {offer.score}
           </span>
-          <h1 style={{ fontSize: "1.6rem", margin: 0 }}>{offer.title}</h1>
+          <h1 style={{ margin: 0, fontSize: "clamp(1.6rem, 1.3rem + 1.2vw, 2.1rem)" }}>{offer.title}</h1>
         </div>
-        {where && <div style={{ color: MUTED, marginTop: 6 }}>{where}</div>}
+        {where && <div className="muted" style={{ marginTop: 6 }}>{where}</div>}
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center", marginTop: 10 }}>
-          {offer.contractType && <span style={chip}>{offer.contractType}</span>}
-          {offer.salary && <span style={{ ...chip, color: "#cfe8d4", borderColor: "#2e4a36" }}>💶 {offer.salary}</span>}
-          {offer.sector && <span style={chip}>{offer.sector}</span>}
-          {postedLabel && <span style={chip}>🗓 {postedLabel}</span>}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center", marginTop: "var(--sp-3)" }}>
+          {offer.contractType && <span className="chip">{offer.contractType}</span>}
+          {offer.salary && <span className="chip chip-pay">💶 {offer.salary}</span>}
+          {offer.sector && <span className="chip">{offer.sector}</span>}
+          {postedLabel && <span className="chip">🗓 {postedLabel}</span>}
         </div>
 
-        {offer.scoreRationale && (
-          <p style={{ color: MUTED, fontSize: "0.85rem", marginTop: 10 }}>{offer.scoreRationale}</p>
-        )}
-        <div style={{ marginTop: 8, fontSize: "0.82rem", color: MUTED }}>
+        {offer.scoreRationale && <p className="muted small" style={{ marginTop: "var(--sp-3)" }}>{offer.scoreRationale}</p>}
+        <div className="small" style={{ marginTop: "var(--sp-2)", color: "var(--faint)" }}>
           {url && (
-            <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT }}>
+            <a href={url} target="_blank" rel="noopener noreferrer">
               Voir l&apos;offre d&apos;origine ↗
             </a>
           )}
@@ -185,34 +146,61 @@ export default async function OffreDetailPage({
         </div>
       </header>
 
-      <section style={{ marginTop: "1.8rem" }}>
+      <div style={{ marginTop: "var(--sp-6)", display: "grid", gap: "var(--sp-5)" }}>
         {app ? (
           <>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
-              <span style={{ color: "#3ddc84", fontSize: "0.9rem" }}>✓ Candidature générée</span>
+              <span className="small" style={{ color: "var(--good)" }}>✓ Candidature générée</span>
               {APPLICATION_FILES.map((f) => (
-                <a
-                  key={f}
-                  href={`/api/applications/${offerId}/${f}`}
-                  style={{ ...chip, color: ACCENT, borderColor: "#2a4658" }}
-                >
+                <a key={f} href={`/api/applications/${offerId}/${f}`} className="chip chip-accent">
                   ⬇ {f}
                 </a>
               ))}
             </div>
+
+            {draft && (
+              <section className="card">
+                <h2 className="section-title">Préparer l&apos;email</h2>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
+                  <a href={gmailComposeUrl(draft)} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ textDecoration: "none" }}>
+                    ✉ Ouvrir dans Gmail
+                  </a>
+                  <a href={mailtoUrl(draft)} className="btn" style={{ textDecoration: "none" }}>
+                    Brouillon mailto
+                  </a>
+                  <a href={`/api/applications/${offerId}/email.eml`} className="chip chip-accent">
+                    ⬇ email.eml (avec pièces jointes)
+                  </a>
+                </div>
+                <p className="muted small" style={{ marginTop: "var(--sp-3)", marginBottom: 0 }}>
+                  Le brouillon <em>mailto</em> pré-remplit l&apos;objet et le message ; les pièces
+                  jointes doivent y être ajoutées à la main. Le fichier <em>email.eml</em> s&apos;ouvre
+                  dans ton client mail avec le CV et la lettre déjà attachés. Aucun envoi automatique.
+                </p>
+              </section>
+            )}
+
+            <TrackingControls
+              offerId={offerId}
+              status={status}
+              statuses={STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+              events={events}
+            />
+
             <ApplicationView content={app.content} />
             <ApplicationEditor offerId={offerId} initial={app.content} />
           </>
         ) : (
-          <>
-            <p style={{ color: MUTED }}>
+          <section className="card">
+            <h2 className="section-title">Candidature</h2>
+            <p className="muted" style={{ marginTop: 0 }}>
               Aucune candidature générée pour cette offre. Lancez la génération du CV
               et de la lettre adaptés.
             </p>
             <GenerateButton offerId={offerId} />
-          </>
+          </section>
         )}
-      </section>
+      </div>
     </main>
   );
 }

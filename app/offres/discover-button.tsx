@@ -33,23 +33,10 @@ export function DiscoverButton() {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-      <button
-        onClick={run}
-        disabled={running}
-        style={{
-          background: running ? "#2a2a33" : "#7fd4ff",
-          color: running ? "#9a9aa3" : "#0b0b0f",
-          border: "none",
-          borderRadius: 8,
-          padding: "0.6rem 1.1rem",
-          fontSize: "0.95rem",
-          fontWeight: 600,
-          cursor: running ? "default" : "pointer",
-        }}
-      >
+      <button onClick={run} disabled={running} className="btn btn-primary">
         {running ? "Recherche en cours…" : "Lancer une recherche"}
       </button>
-      {msg && <span style={{ color: "#9a9aa3", fontSize: "0.9rem" }}>{msg}</span>}
+      {msg && <span className="muted small">{msg}</span>}
     </div>
   );
 }

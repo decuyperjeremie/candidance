@@ -1,52 +1,34 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "4rem 1.5rem" }}>
-      <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>
-        Tatiana — Assistant de recherche d&apos;emploi
+    <main className="container" style={{ maxWidth: 720 }}>
+      <p className="small" style={{ color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "var(--sp-3)" }}>
+        Assistant de recherche d&apos;emploi
+      </p>
+      <h1 style={{ fontSize: "clamp(2.2rem, 1.6rem + 2vw, 3rem)", marginBottom: "var(--sp-4)" }}>
+        Trouver, adapter, suivre — sans le bruit.
       </h1>
-      <p style={{ color: "#9a9aa3", marginTop: 0 }}>
-        Prototype jetable · Slice 2 (Trouver) — offres réelles agrégées.
+      <p style={{ color: "var(--ink-soft)", fontSize: "1.08rem", maxWidth: "52ch" }}>
+        Des offres de communication en Île-de-France, agrégées et filtrées pour un
+        profil de cadre senior. Pour chaque offre, un CV et une lettre adaptés,
+        relus et prêts à envoyer.
       </p>
 
-      <section style={{ marginTop: "2rem", lineHeight: 1.7 }}>
-        <p>
-          <a
-            href="/offres"
-            style={{
-              display: "inline-block",
-              background: "#7fd4ff",
-              color: "#0b0b0f",
-              fontWeight: 600,
-              borderRadius: 8,
-              padding: "0.6rem 1.1rem",
-              textDecoration: "none",
-            }}
-          >
-            Voir les offres →
-          </a>
-        </p>
-        <p style={{ color: "#9a9aa3" }}>
-          Offres de communication (Île-de-France) agrégées, dédupliquées et
-          scorées vs le profil. La sélection / l&apos;édition (CV + lettre) arrive
-          dans les tranches suivantes.
-        </p>
-        <ul style={{ color: "#9a9aa3" }}>
-          <li>
-            Recherche en ligne de commande&nbsp;:{" "}
-            <code style={{ color: "#7fd4ff" }}>npm run discover</code>
-          </li>
-          <li>
-            Endpoints&nbsp;:{" "}
-            <a href="/api/discover" style={{ color: "#7fd4ff" }}>
-              /api/discover
-            </a>{" "}
-            ·{" "}
-            <a href="/api/smoke" style={{ color: "#7fd4ff" }}>
-              /api/smoke
-            </a>
-          </li>
-        </ul>
-      </section>
+      <div style={{ display: "flex", gap: "var(--sp-3)", flexWrap: "wrap", margin: "var(--sp-6) 0" }}>
+        <Link href="/offres" className="btn btn-primary" style={{ textDecoration: "none" }}>
+          Voir les offres →
+        </Link>
+        <Link href="/suivi" className="btn" style={{ textDecoration: "none" }}>
+          Suivi des candidatures
+        </Link>
+      </div>
+
+      <hr className="rule" />
+      <p className="small muted">
+        Recherche en ligne de commande : <code>npm run discover</code> · génération :{" "}
+        <code>npm run generate -- --offer=&lt;id&gt;</code>.
+      </p>
     </main>
   );
 }
