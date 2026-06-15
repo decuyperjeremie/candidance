@@ -13,9 +13,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import JSZip from "jszip";
-import type { CvContent, LetterContent } from "@/lib/generation/content";
+import type { CvContent, CvExperience, LetterContent } from "@/lib/generation/content";
+import { EN_DASH, formatPeriod, groupExperiences, skillPairs } from "./cv-layout";
 
-const TEMPLATE_PATH = join(process.cwd(), "source", "template_cv.docx");
+const TEMPLATE_PATH = join(process.cwd(), "source", "template_cv_ok.docx");
 
 // --- run-property recipes copied verbatim from the template ----------------
 const TNR = '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>';
@@ -48,11 +49,18 @@ function pSection(text: string): string {
   return `<w:p>${pPr}${run(text, RPR_BOLD)}</w:p>`;
 }
 function pEntry(left: string, right?: string): string {
-  const pPr = `<w:pPr><w:tabs><w:tab w:val="right" w:pos="9026"/></w:tabs>${SPACING}</w:pPr>`;
+  const pPr = `<w:pPr><w:tabs><w:tab w:val="right" w:pos="9360"/></w:tabs>${SPACING}</w:pPr>`;
   let runs = run(left, RPR_BOLD);
   if (right) {
     runs += `<w:r>${RPR_BOLD}<w:tab/></w:r>` + run(right, RPR_ITALIC);
   }
+  return `<w:p>${pPr}${runs}</w:p>`;
+}
+/** Two-column row for the key-skills block (left tab like the template). */
+function pSkillRow(a: string, b?: string): string {
+  const pPr = `<w:pPr><w:tabs><w:tab w:val="left" w:pos="4680"/></w:tabs>${SPACING}</w:pPr>`;
+  let runs = run(a, RPR_REG);
+  if (b) runs += `<w:r>${RPR_REG}<w:tab/></w:r>` + run(b, RPR_REG);
   return `<w:p>${pPr}${runs}</w:p>`;
 }
 function pBullet(text: string): string {
@@ -81,23 +89,31 @@ function cvBody(cv: CvContent): string {
     out.push(pSection("PROFIL"));
     out.push(pBody(cv.summary));
   }
-  if (cv.experiences.length) {
-    out.push(pSection("EXPÉRIENCE PROFESSIONNELLE"));
-    for (const e of cv.experiences) {
-      out.push(pEntry([e.title, e.organisation].filter(Boolean).join(" — "), e.period));
+  const renderExperiences = (list: CvExperience[]) => {
+    for (const e of list) {
+      out.push(pEntry([e.title, e.organisation].filter(Boolean).join(` ${EN_DASH} `), formatPeriod(e.period)));
       if (e.location) out.push(pBody(e.location, { rpr: RPR_ITALIC }));
       for (const h of e.highlights) out.push(pBullet(h));
     }
+  };
+  const { professional, teachingResearch } = groupExperiences(cv);
+  if (professional.length) {
+    out.push(pSection("EXPÉRIENCE PROFESSIONNELLE"));
+    renderExperiences(professional);
+  }
+  if (teachingResearch.length) {
+    out.push(pSection("ENSEIGNEMENT & RECHERCHE"));
+    renderExperiences(teachingResearch);
   }
   if (cv.formations.length) {
     out.push(pSection("FORMATION"));
     for (const f of cv.formations) {
-      out.push(pEntry([f.degree, f.institution].filter(Boolean).join(" — "), f.period));
+      out.push(pEntry([f.degree, f.institution].filter(Boolean).join(` ${EN_DASH} `), formatPeriod(f.period)));
     }
   }
   if (cv.skills.length) {
-    out.push(pSection("COMPÉTENCES"));
-    out.push(pBody(cv.skills.join(", ")));
+    out.push(pSection("COMPÉTENCES CLÉS"));
+    for (const [a, b] of skillPairs(cv.skills)) out.push(pSkillRow(a, b));
   }
   if (cv.languages.length) {
     out.push(pSection("LANGUES"));

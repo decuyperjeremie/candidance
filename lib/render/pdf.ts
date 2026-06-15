@@ -10,7 +10,8 @@
  */
 
 import PDFDocument from "pdfkit";
-import type { CvContent, LetterContent } from "@/lib/generation/content";
+import type { CvContent, CvExperience, LetterContent } from "@/lib/generation/content";
+import { EN_DASH, formatPeriod, groupExperiences, skillPairs } from "./cv-layout";
 import {
   ACCENT_COLOR,
   PDF_FONT,
@@ -80,6 +81,21 @@ function entry(doc: PDFKit.PDFDocument, left: string, right?: string): void {
   }
 }
 
+/** Key skills laid out in two columns (two per row). */
+function skillsTwoColumn(doc: PDFKit.PDFDocument, skills: string[]): void {
+  const x = doc.page.margins.left;
+  const w = contentWidth(doc);
+  const colW = w / 2 - 10;
+  doc.font(PDF_FONT).fontSize(SIZES.body).fillColor(TEXT_COLOR);
+  for (const [a, b] of skillPairs(skills)) {
+    const y0 = doc.y;
+    doc.text(a, x, y0, { width: colW });
+    const afterLeft = doc.y;
+    if (b) doc.text(b, x + w / 2, y0, { width: colW });
+    doc.y = Math.max(afterLeft, doc.y);
+  }
+}
+
 /** Render the CV to a PDF buffer. */
 export function renderCvPdf(cv: CvContent): Promise<Buffer> {
   return toBuffer((doc) => {
@@ -97,24 +113,32 @@ export function renderCvPdf(cv: CvContent): Promise<Buffer> {
       section(doc, "Profil");
       para(doc, cv.summary);
     }
-    if (cv.experiences.length) {
-      section(doc, "Expérience professionnelle");
-      for (const e of cv.experiences) {
-        entry(doc, [e.title, e.organisation].filter(Boolean).join(" — "), e.period);
+    const renderExperiences = (list: CvExperience[]) => {
+      for (const e of list) {
+        entry(doc, [e.title, e.organisation].filter(Boolean).join(` ${EN_DASH} `), formatPeriod(e.period));
         if (e.location) para(doc, e.location, { font: PDF_FONT_ITALIC });
         for (const h of e.highlights) para(doc, h, { bullet: true });
         doc.moveDown(0.2);
       }
+    };
+    const { professional, teachingResearch } = groupExperiences(cv);
+    if (professional.length) {
+      section(doc, "Expérience professionnelle");
+      renderExperiences(professional);
+    }
+    if (teachingResearch.length) {
+      section(doc, "Enseignement & recherche");
+      renderExperiences(teachingResearch);
     }
     if (cv.formations.length) {
       section(doc, "Formation");
       for (const f of cv.formations) {
-        entry(doc, [f.degree, f.institution].filter(Boolean).join(" — "), f.period);
+        entry(doc, [f.degree, f.institution].filter(Boolean).join(` ${EN_DASH} `), formatPeriod(f.period));
       }
     }
     if (cv.skills.length) {
-      section(doc, "Compétences");
-      para(doc, cv.skills.join(", "));
+      section(doc, "Compétences clés");
+      skillsTwoColumn(doc, cv.skills);
     }
     if (cv.languages.length) {
       section(doc, "Langues");
