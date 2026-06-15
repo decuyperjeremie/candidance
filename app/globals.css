@@ -159,6 +159,7 @@ main { display: block; }
 }
 .chip-accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, var(--hairline)); background: var(--accent-soft); }
 .chip-pay { color: var(--pay); border-color: color-mix(in srgb, var(--pay) 30%, var(--hairline)); }
+.chip-source { color: var(--ink-soft); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 18%, var(--hairline)); }
 
 /* --- buttons --- */
 .btn {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listOffers } from "@/lib/aggregation/store";
 import { getStatuses, STATUS_LABELS } from "@/lib/tracking/store";
-import { scoreColor, STATUS_COLOR } from "@/app/ui/tokens";
+import { scoreColor, sourceLabel, STATUS_COLOR } from "@/app/ui/tokens";
 import { DiscoverButton } from "./discover-button";
 
 // Reads the SQLite DB at request time — never statically prerendered.
@@ -48,6 +48,7 @@ export default function OffresPage() {
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: "var(--sp-3)" }}>
         {offers.map((o) => {
           const url = o.sources.find((s) => s.url)?.url;
+          const sourceNames = Array.from(new Set(o.sources.map((s) => s.source)));
           const where = [o.company, o.location].filter(Boolean).join(" · ");
           const fresh = freshness(o.postedAt);
           const status = statuses.get(o.id);
@@ -78,6 +79,11 @@ export default function OffresPage() {
                         {STATUS_LABELS[status]}
                       </span>
                     )}
+                    {sourceNames.map((s) => (
+                      <span key={s} className="chip chip-source" title="Provenance de l'offre">
+                        {sourceLabel(s)}
+                      </span>
+                    ))}
                     {o.contractType && <span className="chip">{o.contractType}</span>}
                     {o.salary && <span className="chip chip-pay">💶 {o.salary}</span>}
                     {fresh && (
@@ -90,16 +96,13 @@ export default function OffresPage() {
                   {o.scoreRationale && (
                     <div className="muted small" style={{ marginTop: "var(--sp-3)" }}>{o.scoreRationale}</div>
                   )}
-                  <div className="small" style={{ marginTop: "var(--sp-3)", color: "var(--faint)" }}>
-                    {url && (
+                  {url && (
+                    <div className="small" style={{ marginTop: "var(--sp-3)", color: "var(--faint)" }}>
                       <a href={url} target="_blank" rel="noopener noreferrer">
                         Voir l&apos;offre ↗
                       </a>
-                    )}
-                    <span style={{ marginLeft: url ? "0.8rem" : 0 }}>
-                      sources : {o.sources.map((s) => s.source).join(", ")}
-                    </span>
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </li>

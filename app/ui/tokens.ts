@@ -23,6 +23,22 @@ export function scoreColor(score: number): string {
   return COLOR.muted;
 }
 
+/** Human-readable label per job-source connector (technical name → display). */
+export const SOURCE_LABELS: Record<string, string> = {
+  "france-travail": "France Travail",
+  apec: "APEC",
+  "welcome-to-the-jungle": "Welcome to the Jungle",
+  linkedin: "LinkedIn",
+  indeed: "Indeed",
+  glassdoor: "Glassdoor",
+  "company-site": "Site entreprise",
+};
+
+/** Display label for a source connector name, falling back to the raw name. */
+export function sourceLabel(source: string): string {
+  return SOURCE_LABELS[source] ?? source;
+}
+
 /** Calm per-status tint for tracking chips. */
 export const STATUS_COLOR: Record<ApplicationStatus, string> = {
   à_traiter: "#6f6b62",

@@ -5,7 +5,7 @@ import { APPLICATION_FILES } from "@/lib/render";
 import type { ApplicationContent } from "@/lib/generation/content";
 import { buildDraft, gmailComposeUrl, mailtoUrl } from "@/lib/email/draft";
 import { getEvents, getStatus, STATUSES, STATUS_LABELS } from "@/lib/tracking/store";
-import { scoreColor } from "@/app/ui/tokens";
+import { scoreColor, sourceLabel } from "@/app/ui/tokens";
 import { ApplicationEditor, GenerateButton } from "./editor";
 import { TrackingControls } from "./tracking";
 
@@ -109,6 +109,7 @@ export default async function OffreDetailPage({ params }: { params: Promise<{ id
   const events = app ? getEvents(offerId) : [];
   const draft = app ? buildDraft(offer, app.content.cv.contact.fullName) : null;
   const url = offer.sources.find((s) => s.url)?.url;
+  const sourceNames = Array.from(new Set(offer.sources.map((s) => s.source)));
   const applyUrl =
     offer.contact?.method === "url"
       ? offer.contact.applyUrl
@@ -133,6 +134,11 @@ export default async function OffreDetailPage({ params }: { params: Promise<{ id
         {where && <div className="muted" style={{ marginTop: 6 }}>{where}</div>}
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center", marginTop: "var(--sp-3)" }}>
+          {sourceNames.map((s) => (
+            <span key={s} className="chip chip-source" title="Provenance de l'offre">
+              {sourceLabel(s)}
+            </span>
+          ))}
           {offer.contractType && <span className="chip">{offer.contractType}</span>}
           {offer.salary && <span className="chip chip-pay">💶 {offer.salary}</span>}
           {offer.sector && <span className="chip">{offer.sector}</span>}
@@ -140,16 +146,13 @@ export default async function OffreDetailPage({ params }: { params: Promise<{ id
         </div>
 
         {offer.scoreRationale && <p className="muted small" style={{ marginTop: "var(--sp-3)" }}>{offer.scoreRationale}</p>}
-        <div className="small" style={{ marginTop: "var(--sp-2)", color: "var(--faint)" }}>
-          {url && (
+        {url && (
+          <div className="small" style={{ marginTop: "var(--sp-2)", color: "var(--faint)" }}>
             <a href={url} target="_blank" rel="noopener noreferrer">
               Voir l&apos;offre d&apos;origine ↗
             </a>
-          )}
-          <span style={{ marginLeft: url ? "0.8rem" : 0 }}>
-            sources : {offer.sources.map((s) => s.source).join(", ")}
-          </span>
-        </div>
+          </div>
+        )}
       </header>
 
       <div style={{ marginTop: "var(--sp-6)", display: "grid", gap: "var(--sp-5)" }}>
