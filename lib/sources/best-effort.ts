@@ -2,30 +2,21 @@
  * Best-effort connectors: LinkedIn, Indeed, Glassdoor.
  *
  * These sites fight scraping hard, so they are OFF BY DEFAULT and the slice
- * deliverable never depends on them. They use a headless browser via the
- * OPTIONAL `playwright` dependency, imported lazily so the core installs and
- * runs without it. When playwright is absent or the site blocks us, the
- * connector yields ZERO offers with a recorded reason (console warning) — never
+ * deliverable never depends on them. They route through the `CrawlBackend`
+ * seam (default: lazy Playwright), so Firecrawl / Obscura can be dropped in
+ * later without touching connector code. When the backend is absent or the
+ * site blocks us, the connector yields ZERO offers (console warning) — never
  * a crash (see specs/job-sources, best-effort requirement).
  *
- * The extraction below is a generic scaffold (collect job-detail links). Real,
- * per-site selectors are intentionally left minimal; enable + harden only if a
- * site proves worth the maintenance.
+ * Contact is extracted from rendered HTML via `extractContact` over
+ * `mailto:` links and apply buttons.
  */
 
 import type { JobSourceName } from "@/lib/config";
+import { extractContact, firstEmail, firstUrl } from "./contact";
 import { clean } from "./normalise";
-import type { JobSource, RawOffer, SearchCriteria } from "./types";
-
-/** Lazy, type-free playwright load. Returns null if the dep isn't installed. */
-async function loadPlaywright(): Promise<{ chromium: { launch: (o?: unknown) => Promise<unknown> } } | null> {
-  const moduleName = "playwright"; // non-literal at call site -> not bundled/typed
-  try {
-    return (await import(/* webpackIgnore: true */ moduleName)) as never;
-  } catch {
-    return null;
-  }
-}
+import { getCrawlBackend } from "./crawl-backend";
+import type { JobSource, OfferContact, RawOffer, SearchCriteria } from "./types";
 
 type BestEffortConfig = {
   name: JobSourceName;
@@ -35,7 +26,18 @@ type BestEffortConfig = {
   jobLinkSelector: string;
 };
 
-/** Shared best-effort flow: launch chromium, open the search page, collect links. */
+/** Extract apply contact from a rendered offer page HTML. */
+function contactFromHtml(html: string): OfferContact {
+  const mailtoMatch = html.match(/href="(mailto:[^"]+)"/i);
+  const applyMatch = html.match(/href="([^"]*(?:apply|postuler|candidat)[^"]*)"[^>]*>[^<]*(?:postuler|apply|candidater)/i);
+
+  const emailish = mailtoMatch ? mailtoMatch[1] : undefined;
+  const applyUrl = applyMatch ? applyMatch[1] : firstUrl(html.slice(0, 5000));
+
+  return extractContact({ emailish, urls: applyUrl ? [applyUrl] : [] });
+}
+
+/** Shared best-effort flow: fetch the search page via the crawl backend, collect links. */
 abstract class BestEffortSource implements JobSource {
   readonly reliability = "best-effort" as const;
   protected abstract config: BestEffortConfig;
@@ -45,49 +47,49 @@ abstract class BestEffortSource implements JobSource {
   }
 
   async fetchOffers(criteria: SearchCriteria): Promise<RawOffer[]> {
-    const pw = await loadPlaywright();
-    if (!pw) {
+    const backend = getCrawlBackend();
+    const html = await backend.fetchRendered(this.config.searchUrl(criteria));
+    if (!html) {
       console.warn(
-        `[${this.name}] playwright non installé — source best-effort ignorée ` +
-          `(npm i playwright && npx playwright install chromium pour l'activer). 0 offre.`,
+        `[${this.name}] crawl backend indisponible ou bloqué — source best-effort ignorée. 0 offre.`,
       );
       return [];
     }
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    let browser: any;
     try {
-      browser = await (pw.chromium as any).launch({ headless: true });
-      const page = await browser.newPage();
-      await page.goto(this.config.searchUrl(criteria), {
-        waitUntil: "domcontentloaded",
-        timeout: 20_000,
-      });
-      const links: { href: string; text: string }[] = await page.$$eval(
-        this.config.jobLinkSelector,
-        (els: any[]) =>
-          els.map((e) => ({ href: e.href as string, text: (e.textContent ?? "").trim() })),
-      );
-      return links
-        .map((l) => this.normalise(l))
-        .filter((o): o is RawOffer => o !== null);
+      return this.extractOffers(html);
     } catch (err) {
       console.warn(
-        `[${this.name}] best-effort bloqué/échec (${err instanceof Error ? err.message : String(err)}). 0 offre.`,
+        `[${this.name}] extraction échouée (${err instanceof Error ? err.message : String(err)}). 0 offre.`,
       );
       return [];
-    } finally {
-      if (browser) await browser.close().catch(() => {});
     }
-    /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
-  private normalise(link: { href: string; text: string }): RawOffer | null {
-    const title = clean(link.text);
-    const url = clean(link.href);
-    if (!title || !url) return null;
-    return { source: this.name, sourceLocalId: url, title, url };
+  protected extractOffers(html: string): RawOffer[] {
+    // Generic: collect <a> tags matching the job link selector pattern via regex.
+    const hrefRe = new RegExp(`href="(${this.jobLinkPattern}[^"]*)"[^>]*>([^<]+)`, "gi");
+    const out: RawOffer[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = hrefRe.exec(html)) !== null) {
+      const href = m[1];
+      const text = m[2].trim();
+      const title = clean(text);
+      const url = href.startsWith("http") ? href : `https://${this.host}${href}`;
+      if (!title || !url) continue;
+      out.push({
+        source: this.name,
+        sourceLocalId: url,
+        title,
+        url,
+        contact: contactFromHtml(html),
+      });
+    }
+    return [...new Map(out.map((o) => [o.sourceLocalId, o])).values()];
   }
+
+  protected abstract jobLinkPattern: string;
+  protected abstract host: string;
 }
 
 export class LinkedinSource extends BestEffortSource {
@@ -97,6 +99,8 @@ export class LinkedinSource extends BestEffortSource {
       `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(c.keywords.join(" "))}&location=Île-de-France`,
     jobLinkSelector: "a.base-card__full-link, a[href*='/jobs/view/']",
   };
+  protected jobLinkPattern = "/jobs/view/";
+  protected host = "www.linkedin.com";
 }
 
 export class IndeedSource extends BestEffortSource {
@@ -106,6 +110,8 @@ export class IndeedSource extends BestEffortSource {
       `https://fr.indeed.com/jobs?q=${encodeURIComponent(c.keywords.join(" "))}&l=Île-de-France`,
     jobLinkSelector: "a[href*='/rc/clk'], a.jcs-JobTitle",
   };
+  protected jobLinkPattern = "/rc/clk|/viewjob";
+  protected host = "fr.indeed.com";
 }
 
 export class GlassdoorSource extends BestEffortSource {
@@ -115,4 +121,6 @@ export class GlassdoorSource extends BestEffortSource {
       `https://www.glassdoor.fr/Emploi/île-de-france-${encodeURIComponent(c.keywords.join("-"))}-emplois-SRCH_IL.0,13.htm`,
     jobLinkSelector: "a[href*='/partner/jobListing'], a.JobCard_jobTitle__",
   };
+  protected jobLinkPattern = "/partner/jobListing|/emploi-annonce";
+  protected host = "www.glassdoor.fr";
 }

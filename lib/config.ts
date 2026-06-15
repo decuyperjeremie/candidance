@@ -21,6 +21,7 @@ export const SUPPORTED_JOB_SOURCES = [
   "linkedin",
   "indeed",
   "glassdoor",
+  "company-site",
 ] as const;
 export type JobSourceName = (typeof SUPPORTED_JOB_SOURCES)[number];
 

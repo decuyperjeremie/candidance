@@ -12,6 +12,7 @@ import {
   IndeedSource,
   LinkedinSource,
 } from "./best-effort";
+import { CompanySiteSource } from "./company-site";
 import type { JobSource } from "./types";
 
 const FACTORIES: Record<JobSourceName, () => JobSource> = {
@@ -21,6 +22,7 @@ const FACTORIES: Record<JobSourceName, () => JobSource> = {
   linkedin: () => new LinkedinSource(),
   indeed: () => new IndeedSource(),
   glassdoor: () => new GlassdoorSource(),
+  "company-site": () => new CompanySiteSource(),
 };
 
 /** Instantiate a single connector by name. */

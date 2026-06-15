@@ -1,103 +1,127 @@
 /**
  * Welcome to the Jungle connector — opt-in, non-blocking, medium reliability.
  *
- * WTTJ search is Algolia-backed and rendered client-side; the SSR HTML still
- * embeds a `__NEXT_DATA__` JSON blob from which we try to read job cards. This
- * is best-effort: WTTJ markup/data shape changes often and may block bots — on
- * any mismatch we return [] (recorded reason), never crashing the pass. Not
- * load-bearing for the slice deliverable. Selectors/paths are unverified
- * against live markup (see design.md Open Questions).
+ * WTTJ's web search requires auth for bots. Instead we use their public
+ * Algolia index (app: CSEKHVMS53, index: wk_cms_jobs_production) with the
+ * search-only key embedded in the page. Credentials are stable (public, rotated
+ * if WTTJ changes them) and requests go directly to Algolia — no Playwright needed.
+ *
+ * Best-effort: any failure returns [] without crashing the pass.
  */
 
-import { fetchHtml, readNextData } from "./scrape";
+import { extractContact } from "./contact";
 import { clean, departmentFromLocation } from "./normalise";
 import type { JobSource, RawOffer, SearchCriteria } from "./types";
+
+const ALGOLIA_APP_ID = "CSEKHVMS53";
+const ALGOLIA_SEARCH_KEY = "4bd8f6215d0cc52b26430765769e65a0";
+const ALGOLIA_INDEX = "wk_cms_jobs_production";
+const ALGOLIA_URL = `https://${ALGOLIA_APP_ID.toLowerCase()}-dsn.algolia.net/1/indexes/${ALGOLIA_INDEX}/query`;
+
+type AlgoliaHit = {
+  objectID?: string;
+  slug?: string;
+  name?: string;
+  profile?: string;
+  contract_type?: string;
+  contract_type_names?: { fr?: string };
+  published_at?: string;
+  office?: { city?: string; country_code?: string; district?: string };
+  offices?: { city?: string; country_code?: string; district?: string }[];
+  organization?: { name?: string; slug?: string };
+  apply_on_company_site?: boolean;
+  external_origin?: string;
+};
 
 export class WelcomeToTheJungleSource implements JobSource {
   readonly name = "welcome-to-the-jungle" as const;
   readonly reliability = "medium" as const;
 
   async fetchOffers(criteria: SearchCriteria): Promise<RawOffer[]> {
-    const query = encodeURIComponent(criteria.keywords.join(" "));
-    const url = `https://www.welcometothejungle.com/fr/jobs?query=${query}&aroundQuery=Paris%2C+France`;
-    const $ = await fetchHtml(this.name, url);
-
-    // Try the embedded Next.js data first; fall back to visible job links.
-    const fromData = this.fromNextData(readNextData($));
-    if (fromData.length) return fromData;
-
     const out: RawOffer[] = [];
-    $('a[href*="/companies/"][href*="/jobs/"]').each((_, el) => {
-      const href = $(el).attr("href");
-      const title = clean($(el).text());
-      if (!href || !title) return;
-      const slug = href.split("/jobs/")[1]?.split(/[?#]/)[0];
-      if (!slug) return;
-      out.push({
-        source: this.name,
-        sourceLocalId: slug,
-        title,
-        url: href.startsWith("http") ? href : `https://www.welcometothejungle.com${href}`,
-      });
-    });
+
+    for (const kw of criteria.keywords) {
+      try {
+        const hits = await this.searchAlgolia(kw);
+        for (const h of hits) {
+          const offer = this.normalise(h);
+          if (offer) out.push(offer);
+        }
+      } catch (err) {
+        console.warn(`[welcome-to-the-jungle] Algolia échoué pour "${kw}": ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
     return dedupById(out);
   }
 
-  /** Walk the embedded JSON for anything that looks like a hits[] array. */
-  private fromNextData(data: unknown): RawOffer[] {
-    const hits = findHits(data);
-    return dedupById(
-      hits
-        .map((h) => this.normaliseHit(h))
-        .filter((o): o is RawOffer => o !== null),
-    );
+  private async searchAlgolia(query: string): Promise<AlgoliaHit[]> {
+    const body = JSON.stringify({
+      query,
+      hitsPerPage: 50,
+      // Restrict to France, IDF departments/cities
+      filters: "offices.country_code:FR",
+      attributesToRetrieve: [
+        "objectID", "slug", "name", "profile", "contract_type",
+        "contract_type_names", "published_at", "office", "offices", "organization",
+      ],
+    });
+
+    const res = await fetch(ALGOLIA_URL, {
+      method: "POST",
+      headers: {
+        "x-algolia-application-id": ALGOLIA_APP_ID,
+        "x-algolia-api-key": ALGOLIA_SEARCH_KEY,
+        "Content-Type": "application/json",
+        "Referer": "https://www.welcometothejungle.com/",
+        "Origin": "https://www.welcometothejungle.com",
+      },
+      body,
+    });
+
+    if (!res.ok) throw new Error(`Algolia HTTP ${res.status}`);
+    const json = (await res.json()) as { hits?: AlgoliaHit[] };
+    return json.hits ?? [];
   }
 
-  private normaliseHit(h: Record<string, unknown>): RawOffer | null {
-    const slug = clean(h.slug as string) ?? clean(h.reference as string);
-    const title = clean(h.name as string) ?? clean(h.title as string);
+  private normalise(h: AlgoliaHit): RawOffer | null {
+    const slug = clean(h.slug) ?? clean(h.objectID);
+    const title = clean(h.name);
     if (!slug || !title) return null;
-    const org = h.organization as Record<string, unknown> | undefined;
-    const offices = h.offices as { city?: string }[] | undefined;
-    const location = clean(offices?.map((o) => o.city).filter(Boolean).join(", "));
-    const orgSlug = clean(org?.slug as string);
+
+    const orgSlug = clean(h.organization?.slug);
+    const offerUrl = orgSlug
+      ? `https://www.welcometothejungle.com/fr/companies/${orgSlug}/jobs/${slug}`
+      : undefined;
+
+    // Use the first IDF office if available, else the primary office.
+    const offices = h.offices ?? (h.office ? [h.office] : []);
+    const idfOffice = offices.find((o) =>
+      o.country_code === "FR" && isIdf(o.city, o.district)
+    ) ?? offices.find((o) => o.country_code === "FR") ?? offices[0];
+
+    const location = clean(idfOffice?.city ?? idfOffice?.district);
+
     return {
       source: this.name,
       sourceLocalId: slug,
       title,
-      company: clean(org?.name as string),
+      company: clean(h.organization?.name),
       location,
       departmentCode: departmentFromLocation(location),
-      url:
-        orgSlug != null
-          ? `https://www.welcometothejungle.com/fr/companies/${orgSlug}/jobs/${slug}`
-          : undefined,
-      contractType: clean(h.contract_type as string),
-      postedAt: clean(h.published_at as string),
+      url: offerUrl,
+      contractType: clean(h.contract_type_names?.fr ?? h.contract_type),
+      description: clean(h.profile),
+      postedAt: clean(h.published_at),
+      contact: extractContact({ urls: offerUrl ? [offerUrl] : [] }),
     };
   }
 }
 
-/** Recursively find the first plausible array of job hits in nested JSON. */
-function findHits(data: unknown): Record<string, unknown>[] {
-  const looksLikeJob = (o: unknown): o is Record<string, unknown> =>
-    !!o && typeof o === "object" && ("slug" in o || "reference" in o) && ("name" in o || "title" in o);
-
-  const seen: Record<string, unknown>[] = [];
-  const visit = (node: unknown, depth: number) => {
-    if (depth > 8 || node === null || typeof node !== "object") return;
-    if (Array.isArray(node)) {
-      if (node.length && node.every(looksLikeJob)) {
-        seen.push(...(node as Record<string, unknown>[]));
-        return;
-      }
-      for (const item of node) visit(item, depth + 1);
-      return;
-    }
-    for (const v of Object.values(node)) visit(v, depth + 1);
-  };
-  visit(data, 0);
-  return seen;
+/** Rough IDF city / district detection. */
+function isIdf(city?: string, district?: string): boolean {
+  const IDF_PATTERNS = /paris|seine|val.de.marne|hauts.de.seine|essonne|yvelines|val.d.oise|marne.la|versailles|boulogne|neuilly|levallois|issy|nanterre|montreuil|vincennes|ivry|vitry|st.denis|aubervilliers|cr.teil|argenteuil|cergy|évry|evry|massy/i;
+  return IDF_PATTERNS.test(city ?? "") || IDF_PATTERNS.test(district ?? "");
 }
 
 function dedupById(offers: RawOffer[]): RawOffer[] {

@@ -14,6 +14,7 @@
  */
 
 import { getConfig } from "@/lib/config";
+import { extractContact } from "./contact";
 import { clean, departmentFromLocation } from "./normalise";
 import { IDF_DEPARTMENTS, JobSourceError, type JobSource, type RawOffer, type SearchCriteria } from "./types";
 
@@ -40,6 +41,7 @@ type FtOffer = {
   romeCode?: string;
   lieuTravail?: { libelle?: string; codePostal?: string; commune?: string };
   entreprise?: { nom?: string };
+  contact?: { nom?: string; courriel?: string; urlPostulation?: string };
   origineOffre?: { urlOrigine?: string };
   salaire?: { libelle?: string };
   secteurActivite?: string;
@@ -162,6 +164,11 @@ export class FranceTravailSource implements JobSource {
       sector: clean(o.secteurActivite),
       postedAt: clean(o.dateCreation),
       romeCode: clean(o.romeCode),
+      contact: extractContact({
+        emailish: o.contact?.courriel,
+        urls: [o.contact?.urlPostulation, o.origineOffre?.urlOrigine],
+        name: o.contact?.nom,
+      }),
     };
   }
 
