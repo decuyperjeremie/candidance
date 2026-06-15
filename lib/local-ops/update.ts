@@ -185,6 +185,13 @@ async function runUpdate(startedAt: string): Promise<void> {
     }
 
     // 4. Production build (required for PDF rendering).
+    // NOTE (Windows): this builds `.next` in place while `next start` is still
+    // serving from it. On Windows a build *could* hit a locked file mid-request.
+    // This is the design's chosen flow (Decision 2 builds here, Decision 3's
+    // supervisor only restarts) and is exactly what manual verification 6.2
+    // checks. If locking proves a problem there, move npm ci + build into the
+    // supervised launcher (build while the server is stopped) and have this
+    // route only fetch/reset + drop the sentinel.
     await update({ phase: "building", message: "Construction de l'application…", toCommit: target });
     const buildLog = await runCommand("npm run build", "npm run build");
 
