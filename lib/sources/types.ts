@@ -47,6 +47,12 @@ export type RawOffer = {
   url?: string;
   description?: string;
   contractType?: string;
+  /**
+   * Source-provided contract nature when distinct from the type (e.g. France
+   * Travail `natureContrat`: "Contrat d'apprentissage"). Lets filtering detect
+   * work-study reliably even when the declared type is "CDD"/"CDI".
+   */
+  contractNature?: string;
   /** Human-readable pay string from the source, when available (never invented). */
   salary?: string;
   /** Source activity/NAF code (e.g. France Travail `secteurActivite`). */

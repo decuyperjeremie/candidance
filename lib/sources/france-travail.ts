@@ -36,6 +36,7 @@ type FtOffer = {
   description?: string;
   dateCreation?: string;
   typeContrat?: string;
+  natureContrat?: string;
   romeCode?: string;
   lieuTravail?: { libelle?: string; codePostal?: string; commune?: string };
   entreprise?: { nom?: string };
@@ -156,6 +157,7 @@ export class FranceTravailSource implements JobSource {
       url: clean(o.origineOffre?.urlOrigine),
       description: clean(o.description),
       contractType: clean(o.typeContrat),
+      contractNature: clean(o.natureContrat),
       salary: clean(o.salaire?.libelle),
       sector: clean(o.secteurActivite),
       postedAt: clean(o.dateCreation),
