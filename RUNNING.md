@@ -113,6 +113,40 @@ Via l'app :
 Si le provider LLM n'est pas configuré/joignable, la génération affiche un
 message clair et ne produit **aucun** fichier inventé (pas de crash).
 
+## 8. Relire, envoyer, suivre (Slice 4 — interface web)
+
+Tout se fait depuis l'app web (`npm run dev`, http://localhost:3000). La barre de
+navigation donne accès à **Offres** et **Suivi**.
+
+### Relire et éditer (Slice 4a)
+
+- `/offres` : la liste, triée par pertinence. **Clique un titre** pour ouvrir la fiche.
+- `/offres/<id>` : la fiche détail. Bouton **Générer la candidature** (réutilise la
+  génération anti-ATS), **aperçu** du CV + lettre, **éditeur** inline (titre, résumé,
+  expériences + atouts, compétences, langues, paragraphes de lettre), **Enregistrer**.
+- Les 4 téléchargements (`cv.pdf`, `cv.docx`, `lettre.pdf`, `lettre.docx`) reflètent
+  toujours le dernier contenu enregistré.
+
+### Envoyer (Slice 4b — handoff email, envoi manuel)
+
+Depuis la fiche, section **Préparer l'email** :
+- **Brouillon mailto** : ouvre ton client mail avec objet + message pré-remplis
+  (les pièces jointes s'ajoutent à la main — `mailto:` ne peut pas les porter).
+- **email.eml** (`GET /api/applications/<id>/email.eml`) : un fichier `.eml` qui
+  s'ouvre dans le client mail avec le CV et la lettre **déjà attachés** (MIME fait
+  main, pas de SMTP). **Aucun envoi automatique.**
+
+### Suivre (Slice 4b — statuts + historique)
+
+- Statuts : `à_traiter` → `générée` → `validée` → `envoyée` → `relancée` → `réponse`.
+  La génération met le statut à `générée` ; les autres sont posés à la main depuis
+  la fiche. On peut **noter une relance** (passe en `relancée`) et **ajouter une note**.
+- `/suivi` : toutes les candidatures avec offre, statut et dernière mise à jour ;
+  chaque ligne ramène à sa fiche. Le statut s'affiche aussi en pastille dans `/offres`.
+
+> ⚠️ Les PDF se rendent en build de prod (`npm run build && npm start`). En `npm run dev`
+> les téléchargements/`.eml` PDF échouent (pdfkit) ; les DOCX marchent partout.
+
 ## Structure (slice bootstrap-foundations)
 
 ```
