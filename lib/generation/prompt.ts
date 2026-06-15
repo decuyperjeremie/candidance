@@ -56,7 +56,8 @@ RÈGLE ABSOLUE — ZÉRO INVENTION :
 
 FORMAT :
 - Tout en français.
-- Dates au format MM/AAAA quand c'est possible.
+- Dates en années : « AAAA – AAAA » (ex. « 2020 – 2022 »), poste en cours « depuis AAAA ». N'invente jamais une année absente du profil.
+- Classe chaque expérience via "category" : "enseignement_recherche" pour les postes académiques/d'enseignement/de recherche (doctorat, université, chargé de TD, etc.), sinon "professionnelle".
 - Réponds STRICTEMENT avec un objet JSON valide conforme au schéma ci-dessous, sans texte autour, sans bloc de code markdown.`;
 
 const SCHEMA_HINT = `Schéma JSON attendu :
@@ -65,7 +66,7 @@ const SCHEMA_HINT = `Schéma JSON attendu :
     "headline": "string (titre/accroche adapté à l'offre, optionnel)",
     "summary": "string (paragraphe de profil adapté, fait-only, optionnel)",
     "contact": { "fullName": "string", "email": "string?", "phone": "string?", "location": "string?", "linkedinUrl": "string?" },
-    "experiences": [ { "title": "string", "organisation": "string?", "period": "string?", "location": "string?", "highlights": ["string", ...] } ],
+    "experiences": [ { "title": "string", "organisation": "string?", "period": "string?", "location": "string?", "category": "professionnelle | enseignement_recherche (optionnel)", "highlights": ["string", ...] } ],
     "formations": [ { "degree": "string", "institution": "string?", "period": "string?" } ],
     "skills": ["string", ...],
     "languages": [ { "name": "string", "level": "string?" } ]

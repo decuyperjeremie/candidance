@@ -11,6 +11,7 @@ import { loadCandidateProfile } from "@/lib/profile";
 import { adaptApplication, GenerationError } from "./adapt";
 import type { ApplicationContent } from "./content";
 import { saveApplication } from "./store";
+import { setStatus } from "@/lib/tracking/store";
 import { verifyAgainstProfile, normalizeProse, type VerificationReport } from "./verify";
 import { APPLICATION_FILES } from "@/lib/render";
 
@@ -47,6 +48,9 @@ export async function generateApplication(offerId: number): Promise<GenerateResu
   }
 
   saveApplication({ offerId, content, provider, model });
+  // Generating (or regenerating) puts the application back to 'générée' so it is
+  // re-reviewed before sending. Editing (the PUT route) leaves the status alone.
+  setStatus(offerId, "générée");
 
   return {
     content,

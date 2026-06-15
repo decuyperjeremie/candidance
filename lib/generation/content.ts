@@ -22,9 +22,11 @@ export type CvContact = z.infer<typeof CvContact>;
 export const CvExperience = z.object({
   title: z.string().min(1),
   organisation: z.string().optional(),
-  /** Normalised to "MM/AAAA – MM/AAAA" where possible by the prompt. */
+  /** Raw period; reformatted to a year-based form at render (see lib/render/cv-layout). */
   period: z.string().optional(),
   location: z.string().optional(),
+  /** Drives the CV section: professional experience vs teaching/research. */
+  category: z.enum(["professionnelle", "enseignement_recherche"]).optional(),
   /** Offer-adapted bullet points, drawn from the profile's real highlights. */
   highlights: z.array(z.string()).default([]),
 });

@@ -115,13 +115,13 @@ export function verifyAgainstProfile(
 
 /**
  * Style normalisation: the cv-lettre-motivation-fr skill forbids the em dash
- * (—), en dash (–) and double hyphen. The prompt asks for it, but that is not a
- * guarantee, so we strip them deterministically before saving, replacing each
- * with a plain short hyphen (an articulation the skill explicitly allows).
+ * (—) and the double hyphen. We strip those deterministically before saving,
+ * replacing each with a short hyphen. The en dash (–) is intentionally KEPT:
+ * the reference CV template uses it for dates and incises (see cv-layout).
  */
 function stripLongDashes(s: string): string {
   return s
-    .replace(/\s*(?:[—–]|--)\s*/g, " - ")
+    .replace(/\s*(?:—|--)\s*/g, " - ")
     .replace(/ {2,}/g, " ")
     .trim();
 }
