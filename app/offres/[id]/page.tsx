@@ -109,6 +109,12 @@ export default async function OffreDetailPage({ params }: { params: Promise<{ id
   const events = app ? getEvents(offerId) : [];
   const draft = app ? buildDraft(offer, app.content.cv.contact.fullName) : null;
   const url = offer.sources.find((s) => s.url)?.url;
+  const applyUrl =
+    offer.contact?.method === "url"
+      ? offer.contact.applyUrl
+      : offer.contact?.method === "email"
+        ? undefined
+        : url;
   const where = [offer.company, offer.location].filter(Boolean).join(" · ");
   const postedAt = offer.postedAt ? new Date(offer.postedAt) : null;
   const postedLabel = postedAt && !Number.isNaN(postedAt.getTime()) ? postedAt.toLocaleDateString("fr-FR") : null;
@@ -171,7 +177,18 @@ export default async function OffreDetailPage({ params }: { params: Promise<{ id
                   <a href={`/api/applications/${offerId}/email.eml`} className="chip chip-accent">
                     ⬇ email.eml (avec pièces jointes)
                   </a>
+                  {applyUrl && (
+                    <a href={applyUrl} target="_blank" rel="noopener noreferrer" className="chip chip-accent" style={{ textDecoration: "none" }}>
+                      Postuler en ligne ↗
+                    </a>
+                  )}
                 </div>
+                {offer.contact?.method === "email" && offer.contact.email && (
+                  <p className="muted small" style={{ marginTop: "var(--sp-2)", marginBottom: 0 }}>
+                    Destinataire détecté : <strong>{offer.contact.email}</strong>
+                    {offer.contact.contactName ? ` (${offer.contact.contactName})` : ""}
+                  </p>
+                )}
                 <p className="muted small" style={{ marginTop: "var(--sp-3)", marginBottom: 0 }}>
                   Le brouillon <em>mailto</em> pré-remplit l&apos;objet et le message ; les pièces
                   jointes doivent y être ajoutées à la main. Le fichier <em>email.eml</em> s&apos;ouvre

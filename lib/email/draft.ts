@@ -17,6 +17,7 @@ export type EmailDraft = {
 
 /** Build the subject + body for an offer, signed with the candidate's name. */
 export function buildDraft(offer: StoredOffer, candidateName: string, recipient?: string): EmailDraft {
+  recipient ??= offer.contact?.method === "email" ? offer.contact.email : undefined;
   const role = offer.title;
   const atCompany = offer.company ? ` au sein de ${offer.company}` : "";
   const body = [
