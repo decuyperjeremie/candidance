@@ -183,6 +183,38 @@ main { display: block; }
 }
 .btn-primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
 .btn-primary:disabled { background: var(--hairline-strong); border-color: var(--hairline-strong); color: var(--surface); }
+.btn-sm { font-size: 0.8rem; padding: 0.35rem 0.7rem; border-radius: var(--radius-sm); }
+
+/* --- version + update control (local install) --- */
+.update-control {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+}
+.update-uptodate { color: var(--faint); letter-spacing: 0.02em; }
+.update-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--muted);
+}
+.update-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--pay, #b00);
+}
+.update-spinner {
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid var(--hairline-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  display: inline-block;
+  animation: update-spin 0.7s linear infinite;
+}
+@keyframes update-spin { to { transform: rotate(360deg); } }
 
 /* --- inputs --- */
 .input {

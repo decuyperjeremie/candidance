@@ -1,5 +1,20 @@
 # Lancer Tatiana (prototype)
 
+## Installer sur le PC de Tatiana (non-développeur)
+
+Pour une installation **sans terminal** sur un PC Windows, ne suis pas ce
+runbook développeur : utilise le runbook **[`setup/install.md`](setup/install.md)**,
+qui s'exécute **dans Claude Code (Claude Desktop)**. Il installe les prérequis,
+clone le dépôt, build, crée un raccourci Bureau, et la génération utilise le
+compte Claude connecté localement (provider `claude-code`, sans clé API). Les
+mises à jour se font ensuite via le bouton **« Mettre à jour »** intégré à l'app.
+
+> Dépôt : `https://github.com/decuyperjeremie/candidance`
+
+---
+
+Le reste de ce document est le **runbook développeur** (lancer depuis les sources).
+
 ## 1. Installer
 
 ```bash

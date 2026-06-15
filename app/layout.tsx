@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
+import UpdateControl from "./ui/UpdateControl";
 
 const display = Fraunces({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </Link>
             <Link href="/offres">Offres</Link>
             <Link href="/suivi">Suivi</Link>
+            <UpdateControl />
           </div>
         </nav>
         {children}
