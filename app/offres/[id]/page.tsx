@@ -129,16 +129,20 @@ export default async function OffreDetailPage({ params }: { params: Promise<{ id
           <span style={{ color: scoreColor(offer.score), fontWeight: 600, fontVariantNumeric: "tabular-nums" }} title="Score de pertinence (0–100)">
             {offer.score}
           </span>
-          <h1 style={{ margin: 0, fontSize: "clamp(1.6rem, 1.3rem + 1.2vw, 2.1rem)" }}>{offer.title}</h1>
+          <h1 style={{ margin: 0, fontSize: "clamp(1.6rem, 1.3rem + 1.2vw, 2.1rem)", flex: 1, minWidth: 0 }}>{offer.title}</h1>
+          {sourceNames.length > 0 && (
+            <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+              {sourceNames.map((s) => (
+                <span key={s} className="chip chip-source" title="Provenance de l'offre">
+                  {sourceLabel(s)}
+                </span>
+              ))}
+            </span>
+          )}
         </div>
         {where && <div className="muted" style={{ marginTop: 6 }}>{where}</div>}
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center", marginTop: "var(--sp-3)" }}>
-          {sourceNames.map((s) => (
-            <span key={s} className="chip chip-source" title="Provenance de l'offre">
-              {sourceLabel(s)}
-            </span>
-          ))}
           {offer.contractType && <span className="chip">{offer.contractType}</span>}
           {offer.salary && <span className="chip chip-pay">💶 {offer.salary}</span>}
           {offer.sector && <span className="chip">{offer.sector}</span>}

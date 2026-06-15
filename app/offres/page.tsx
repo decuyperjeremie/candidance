@@ -62,10 +62,21 @@ export default function OffresPage() {
                   {o.score}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "1.08rem", fontWeight: 600 }}>
-                    <Link href={`/offres/${o.id}`} style={{ color: "var(--ink)" }}>
-                      {o.title}
-                    </Link>
+                  <div style={{ display: "flex", gap: "var(--sp-3)", alignItems: "baseline" }}>
+                    <div style={{ fontSize: "1.08rem", fontWeight: 600, flex: 1, minWidth: 0 }}>
+                      <Link href={`/offres/${o.id}`} style={{ color: "var(--ink)" }}>
+                        {o.title}
+                      </Link>
+                    </div>
+                    {sourceNames.length > 0 && (
+                      <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+                        {sourceNames.map((s) => (
+                          <span key={s} className="chip chip-source" title="Provenance de l'offre">
+                            {sourceLabel(s)}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </div>
                   {where && <div className="muted small" style={{ marginTop: 2 }}>{where}</div>}
 
@@ -79,28 +90,29 @@ export default function OffresPage() {
                         {STATUS_LABELS[status]}
                       </span>
                     )}
-                    {sourceNames.map((s) => (
-                      <span key={s} className="chip chip-source" title="Provenance de l'offre">
-                        {sourceLabel(s)}
-                      </span>
-                    ))}
                     {o.contractType && <span className="chip">{o.contractType}</span>}
-                    {o.salary && <span className="chip chip-pay">💶 {o.salary}</span>}
-                    {fresh && (
-                      <span className="small" style={{ color: fresh.color }} title="Date de publication">
-                        🗓 {fresh.label}
-                      </span>
-                    )}
                   </div>
 
                   {o.scoreRationale && (
                     <div className="muted small" style={{ marginTop: "var(--sp-3)" }}>{o.scoreRationale}</div>
                   )}
-                  {url && (
-                    <div className="small" style={{ marginTop: "var(--sp-3)", color: "var(--faint)" }}>
-                      <a href={url} target="_blank" rel="noopener noreferrer">
-                        Voir l&apos;offre ↗
-                      </a>
+                  {(url || o.salary || fresh) && (
+                    <div className="small" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "var(--sp-3)" }}>
+                      {url && (
+                        <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--faint)" }}>
+                          Voir l&apos;offre ↗
+                        </a>
+                      )}
+                      {(o.salary || fresh) && (
+                        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                          {o.salary && <span className="chip chip-pay">💶 {o.salary}</span>}
+                          {fresh && (
+                            <span style={{ color: fresh.color }} title="Date de publication">
+                              🗓 {fresh.label}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
