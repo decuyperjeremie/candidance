@@ -7,7 +7,7 @@
  * limitation acceptable for the prototype (see design.md).
  */
 
-import type { RawOffer } from "@/lib/sources/types";
+import type { OfferContact, RawOffer } from "@/lib/sources/types";
 import { norm } from "./text";
 
 /** One source's contribution to a de-duplicated offer. */
@@ -29,6 +29,7 @@ export type AggregatedOffer = {
   salary?: string;
   sector?: string;
   postedAt?: string;
+  contact?: OfferContact;
   sources: OfferProvenance[];
 };
 
@@ -60,6 +61,16 @@ function titleKey(title: string): string {
     .replace(/\(?\b[hf]\s*[\/]\s*[hf]\b\)?/g, " ") // (h/f), f/h, m/f-ish
     .replace(/\s+/g, " ")
     .trim();
+}
+
+const CONTACT_RANK: Record<OfferContact["method"], number> = { email: 2, url: 1, none: 0 };
+
+/** Merge two contacts, keeping the one with the strongest method. */
+function mergeContact(a?: OfferContact, b?: OfferContact): OfferContact | undefined {
+  if (!a && !b) return undefined;
+  if (!a) return b;
+  if (!b) return a;
+  return CONTACT_RANK[a.method] >= CONTACT_RANK[b.method] ? a : b;
 }
 
 /** Compute the fuzzy dedup key for an offer. */
@@ -100,6 +111,7 @@ export function dedupeOffers(raw: RawOffer[]): {
         salary: o.salary,
         sector: o.sector,
         postedAt: o.postedAt,
+        contact: o.contact,
         sources: [prov],
       });
       continue;
@@ -121,6 +133,7 @@ export function dedupeOffers(raw: RawOffer[]): {
     existing.salary ??= o.salary;
     existing.sector ??= o.sector;
     existing.postedAt ??= o.postedAt;
+    existing.contact = mergeContact(existing.contact, o.contact);
   }
 
   return { offers: [...byKey.values()], duplicatesMerged };

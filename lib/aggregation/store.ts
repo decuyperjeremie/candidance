@@ -8,6 +8,7 @@
  */
 
 import { getDb } from "@/lib/db";
+import type { OfferContact } from "@/lib/sources/types";
 import type { AggregatedOffer } from "./dedup";
 
 /** A de-duplicated offer enriched with its relevance score. */
@@ -30,6 +31,7 @@ export type StoredOffer = {
   postedAt?: string;
   score: number;
   scoreRationale?: string;
+  contact?: OfferContact;
   sources: { source: string; url?: string }[];
 };
 
@@ -40,10 +42,12 @@ export function persistOffers(offers: ScoredOffer[]): number {
   const upsertOffer = db.prepare(`
     INSERT INTO offers
       (dedup_key, title, company, location, department_code, contract_type,
-       description, salary, sector, posted_at, score, score_rationale, last_seen_at)
+       description, salary, sector, posted_at, score, score_rationale,
+       contact_method, contact_email, contact_url, contact_name, last_seen_at)
     VALUES
       (@dedupKey, @title, @company, @location, @departmentCode, @contractType,
-       @description, @salary, @sector, @postedAt, @score, @scoreRationale, datetime('now'))
+       @description, @salary, @sector, @postedAt, @score, @scoreRationale,
+       @contactMethod, @contactEmail, @contactUrl, @contactName, datetime('now'))
     ON CONFLICT(dedup_key) DO UPDATE SET
       title           = excluded.title,
       company         = COALESCE(excluded.company, offers.company),
@@ -56,6 +60,10 @@ export function persistOffers(offers: ScoredOffer[]): number {
       posted_at       = COALESCE(excluded.posted_at, offers.posted_at),
       score           = excluded.score,
       score_rationale = excluded.score_rationale,
+      contact_method  = COALESCE(excluded.contact_method, offers.contact_method),
+      contact_email   = COALESCE(excluded.contact_email, offers.contact_email),
+      contact_url     = COALESCE(excluded.contact_url, offers.contact_url),
+      contact_name    = COALESCE(excluded.contact_name, offers.contact_name),
       last_seen_at    = datetime('now')
     RETURNING id
   `);
@@ -84,6 +92,10 @@ export function persistOffers(offers: ScoredOffer[]): number {
         postedAt: o.postedAt ?? null,
         score: o.score,
         scoreRationale: o.scoreRationale,
+        contactMethod: o.contact?.method ?? null,
+        contactEmail: o.contact?.email ?? null,
+        contactUrl: o.contact?.applyUrl ?? null,
+        contactName: o.contact?.contactName ?? null,
       }) as { id: number };
 
       for (const s of o.sources) {
@@ -123,12 +135,22 @@ export function recordCrawlRun(summary: {
 }
 
 const OFFER_COLUMNS = `id, title, company, location, department_code, contract_type,
-             description, salary, sector, posted_at, score, score_rationale`;
+             description, salary, sector, posted_at, score, score_rationale,
+             contact_method, contact_email, contact_url, contact_name`;
 
 function mapOfferRow(r: Record<string, unknown>): StoredOffer {
   const sourcesFor = getDb().prepare(
     "SELECT source, url FROM offer_sources WHERE offer_id = ?",
   );
+  const contactMethod = r.contact_method as string | null;
+  const contact: OfferContact | undefined = contactMethod
+    ? {
+        method: contactMethod as OfferContact["method"],
+        email: (r.contact_email as string) ?? undefined,
+        applyUrl: (r.contact_url as string) ?? undefined,
+        contactName: (r.contact_name as string) ?? undefined,
+      }
+    : undefined;
   return {
     id: r.id as number,
     title: r.title as string,
@@ -142,6 +164,7 @@ function mapOfferRow(r: Record<string, unknown>): StoredOffer {
     postedAt: (r.posted_at as string) ?? undefined,
     score: r.score as number,
     scoreRationale: (r.score_rationale as string) ?? undefined,
+    contact,
     sources: sourcesFor.all(r.id) as { source: string; url?: string }[],
   };
 }
