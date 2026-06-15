@@ -65,6 +65,11 @@ const JUNIOR_DESC_PATTERNS: RegExp[] = [
   /\b(type de )?contrat\s*:?\s*(alternance|apprentissage|professionnalisation)\b/,
   /\ben tant qu e?\s*apprenti/,
   /\bpropos\w*\s+(un|une)\s+(alternance|apprentissage)\b/,
+  // Recruited-person NOUN "alternant(e)" behind a determiner: the offer hires an
+  // alternant ("recherchons un alternant", "l'alternant évoluera", "en tant
+  // qu'alternant"). Gated on the determiner so the verb "alternant" ("en
+  // alternant les supports") and the contract noun "alternance" never match.
+  /\b(un|une|notre|l|d|qu|que)\s+alternante?\b/,
   /\(\s*stage\s*\)/,
   /\bstage\s*[-:]/,
   /\b(recherch|recrut|propos)\w*\s+(un|une|un\s*e|notre)\s*stagiaire\b/,
@@ -82,8 +87,12 @@ export function isExcludedContract(
   const head = `${offer.title ?? ""} ${offer.contractType ?? ""} ${offer.contractNature ?? ""}`;
   if (JUNIOR_TITLE_WORDS.some((w) => containsWord(head, w))) return true;
   // "·", "/" and apostrophes -> space so glued/elided forms match
-  // (e.g. "qu'apprenti" -> "qu apprenti", "contrat d'apprentissage").
-  const desc = norm(offer.description).replace(/[·/'’]/g, " ").replace(/\s+/g, " ");
+  // (e.g. "qu'apprenti" -> "qu apprenti", "contrat d'apprentissage"); FR
+  // inflection parens are dropped so "un(e) alternant(e)" -> "un alternant".
+  const desc = norm(offer.description)
+    .replace(/[·/'’]/g, " ")
+    .replace(/\(\s*e?s?\)/g, "")
+    .replace(/\s+/g, " ");
   return JUNIOR_DESC_PATTERNS.some((re) => re.test(desc));
 }
 
