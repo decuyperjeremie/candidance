@@ -29,6 +29,14 @@ export type SearchCriteria = {
   departments: string[];
 };
 
+/** How to apply to an offer — email preferred, link fallback, or nothing. */
+export type OfferContact = {
+  method: "email" | "url" | "none";
+  email?: string;
+  applyUrl?: string;
+  contactName?: string;
+};
+
 /**
  * A connector's normalised offer. Built defensively — fields with no source
  * data stay absent (never fabricated), per the no-invention rule.
@@ -61,6 +69,8 @@ export type RawOffer = {
   postedAt?: string;
   /** Source-specific code (e.g. France Travail ROME), kept for debugging. */
   romeCode?: string;
+  /** Extracted apply contact: validated email > apply URL > none. */
+  contact?: OfferContact;
 };
 
 /** The connector interface. */
