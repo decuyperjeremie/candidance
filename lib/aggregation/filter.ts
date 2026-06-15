@@ -56,6 +56,15 @@ const JUNIOR_DESC_PATTERNS: RegExp[] = [
   /\ben apprentissage\b/,
   /contrat d apprentissage\b/,
   /contrat de professionnalisation\b/,
+  // Label / role form: the offer announces itself as work-study, e.g.
+  // "Alternance - Chargé de…", "Apprentissage : …", "en tant qu'apprenti(e)",
+  // "vous propose une alternance" (bare keyword stays out, so "une expérience
+  // en alternance est un plus" / "y compris alternance" are NOT matched).
+  /\b(alternance|apprentissage|professionnalisation)\s*[-:]/,
+  /\bposte a pourvoir\s*:?\s*(alternance|apprentissage)\b/,
+  /\b(type de )?contrat\s*:?\s*(alternance|apprentissage|professionnalisation)\b/,
+  /\ben tant qu e?\s*apprenti/,
+  /\bpropos\w*\s+(un|une)\s+(alternance|apprentissage)\b/,
   /\(\s*stage\s*\)/,
   /\bstage\s*[-:]/,
   /\b(recherch|recrut|propos)\w*\s+(un|une|un\s*e|notre)\s*stagiaire\b/,
@@ -66,12 +75,15 @@ const JUNIOR_DESC_PATTERNS: RegExp[] = [
 
 /** True if the offer is an internship / work-study / apprenticeship role. */
 export function isExcludedContract(
-  offer: Pick<RawOffer, "title" | "contractType" | "description">,
+  offer: Pick<RawOffer, "title" | "contractType" | "contractNature" | "description">,
 ): boolean {
-  const head = `${offer.title ?? ""} ${offer.contractType ?? ""}`;
+  // Contract nature (e.g. France Travail "Contrat d'apprentissage") is a
+  // reliable junior signal even when the declared type is "CDD"/"CDI".
+  const head = `${offer.title ?? ""} ${offer.contractType ?? ""} ${offer.contractNature ?? ""}`;
   if (JUNIOR_TITLE_WORDS.some((w) => containsWord(head, w))) return true;
-  // "·" and "/" -> space so glued forms match.
-  const desc = norm(offer.description).replace(/[·/]/g, " ").replace(/\s+/g, " ");
+  // "·", "/" and apostrophes -> space so glued/elided forms match
+  // (e.g. "qu'apprenti" -> "qu apprenti", "contrat d'apprentissage").
+  const desc = norm(offer.description).replace(/[·/'’]/g, " ").replace(/\s+/g, " ");
   return JUNIOR_DESC_PATTERNS.some((re) => re.test(desc));
 }
 
