@@ -28,6 +28,11 @@ The system SHALL provide a connector that discovers offers from direct company c
 - **WHEN** the company career page exposes an apply button/link but no email
 - **THEN** the offer is returned with contact `method = "url"`
 
+## RENAMED Requirements
+
+- FROM: `### Requirement: Best-effort connectors (LinkedIn, Indeed, Glassdoor)`
+- TO: `### Requirement: Best-effort connectors (LinkedIn, Indeed, Glassdoor, Welcome to the Jungle, company sites)`
+
 ## MODIFIED Requirements
 
 ### Requirement: Best-effort connectors (LinkedIn, Indeed, Glassdoor, Welcome to the Jungle, company sites)
