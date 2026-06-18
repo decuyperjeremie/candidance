@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { scoreColor, sourceLabel } from "@/app/ui/tokens";
+import type { SalaryInfo } from "@/lib/aggregation/salary";
+import { SalaryChips } from "./salary-chips";
 
 /** Serializable view-model for one offer row, built server-side in page.tsx. */
 export type OfferRow = {
@@ -18,8 +20,8 @@ export type OfferRow = {
   sources: { source: string; url?: string }[];
   statusLabel: string | null;
   statusColor: string | null;
-  /** Annualised pay for sorting only (see lib/aggregation/salary.ts). */
-  salaryAmount: number | null;
+  /** Structured pay breakdown; salaryInfo.annual drives salary sorting. */
+  salaryInfo: SalaryInfo | null;
 };
 
 type SortKey = "score" | "date" | "salary";
@@ -46,7 +48,7 @@ function freshness(postedAt?: string): { label: string; color: string } | null {
 /** Comparable value for an offer under a given sort key (null → ranked last). */
 function valueFor(o: OfferRow, key: SortKey): number | null {
   if (key === "score") return o.score;
-  if (key === "salary") return o.salaryAmount;
+  if (key === "salary") return o.salaryInfo?.annual ?? null;
   const t = o.postedAt ? Date.parse(o.postedAt) : NaN;
   return Number.isNaN(t) ? null : t;
 }
@@ -167,8 +169,8 @@ export function OffersList({ offers }: { offers: OfferRow[] }) {
                         </a>
                       )}
                       {(o.salary || fresh) && (
-                        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                          {o.salary && <span className="chip chip-pay">💶 {o.salary}</span>}
+                        <span style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
+                          <SalaryChips info={o.salaryInfo} raw={o.salary} />
                           {fresh && (
                             <span style={{ color: fresh.color }} title="Date de publication">
                               🗓 {fresh.label}

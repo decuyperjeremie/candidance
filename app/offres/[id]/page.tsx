@@ -6,7 +6,9 @@ import type { ApplicationContent } from "@/lib/generation/content";
 import { buildDraft, gmailComposeUrl, mailtoUrl } from "@/lib/email/draft";
 import { getEvents, getStatus, STATUSES, STATUS_LABELS } from "@/lib/tracking/store";
 import { scoreColor, sourceLabel } from "@/app/ui/tokens";
+import { parseSalary, salaryExtractionSummary } from "@/lib/aggregation/salary";
 import { ApplicationEditor, GenerateButton } from "./editor";
+import { SalaryChips } from "../salary-chips";
 import { TrackingControls } from "./tracking";
 
 // Reads the SQLite DB at request time — never statically prerendered.
@@ -117,6 +119,8 @@ export default async function OffreDetailPage({ params }: { params: Promise<{ id
         ? undefined
         : url;
   const where = [offer.company, offer.location].filter(Boolean).join(" · ");
+  const salaryInfo = parseSalary(offer.salary);
+  const salaryExtraction = salaryExtractionSummary(salaryInfo);
   const postedAt = offer.postedAt ? new Date(offer.postedAt) : null;
   const postedLabel = postedAt && !Number.isNaN(postedAt.getTime()) ? postedAt.toLocaleDateString("fr-FR") : null;
 
@@ -144,10 +148,17 @@ export default async function OffreDetailPage({ params }: { params: Promise<{ id
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center", marginTop: "var(--sp-3)" }}>
           {offer.contractType && <span className="chip">{offer.contractType}</span>}
-          {offer.salary && <span className="chip chip-pay">💶 {offer.salary}</span>}
+          <SalaryChips info={salaryInfo} raw={offer.salary} />
           {offer.sector && <span className="chip">{offer.sector}</span>}
           {postedLabel && <span className="chip">🗓 {postedLabel}</span>}
         </div>
+
+        {offer.salary && (
+          <p className="muted small" style={{ marginTop: "var(--sp-3)", marginBottom: 0 }}>
+            💶 Rémunération — source&nbsp;: «&nbsp;{offer.salary}&nbsp;»
+            {salaryExtraction ? ` → extrait : ${salaryExtraction}` : " → aucun montant exploitable extrait"}
+          </p>
+        )}
 
         {offer.scoreRationale && <p className="muted small" style={{ marginTop: "var(--sp-3)" }}>{offer.scoreRationale}</p>}
         {url && (

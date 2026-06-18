@@ -1,5 +1,5 @@
 import { listOffers } from "@/lib/aggregation/store";
-import { parseSalaryAmount } from "@/lib/aggregation/salary";
+import { parseSalary } from "@/lib/aggregation/salary";
 import { getStatuses, STATUS_LABELS } from "@/lib/tracking/store";
 import { STATUS_COLOR } from "@/app/ui/tokens";
 import { DiscoverButton } from "./discover-button";
@@ -27,7 +27,7 @@ export default function OffresPage() {
       sources: o.sources,
       statusLabel: status ? STATUS_LABELS[status] : null,
       statusColor: status ? STATUS_COLOR[status] : null,
-      salaryAmount: parseSalaryAmount(o.salary),
+      salaryInfo: parseSalary(o.salary),
     };
   });
 
